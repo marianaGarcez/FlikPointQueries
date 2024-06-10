@@ -11,13 +11,15 @@ RUN apt-get update \
     && apt-get update \
     && apt-get install -y java-21-amazon-corretto-jdk
 
+# Install Maven
+RUN apt-get update && \
+    apt-get install -y maven
+
 COPY target/flink-kafka2postgres-1.0-SNAPSHOT.jar /app/flink-kafka2postgres.jar
 COPY  jmeos/jar/JMEOS.jar /usr/local/jmeos/jar/JMEOS.jar
-RUN mvn install:install-file -Dfile=/usr/local/jmeos/jar/JMEOS.jar -DgroupId=com.mobilitydb -DartifactId=jmeos -Dversion=1.0.0 -Dpackaging=jar
-
 
 COPY wait-for-it.sh /app/wait-for-it.sh
 
 RUN chmod +x /app/wait-for-it.sh
 
-ENTRYPOINT ["/app/wait-for-it.sh", "kafka:9092", "--", "java", "-cp", "/app/flink-kafka2postgres.jar", "aisdata.Main"]
+ENTRYPOINT ["/app/wait-for-it.sh", "kafka:9092", "--", "java", "-cp", "/app/flink-kafka2postgres.jar", "--add-opens", "java.base/java.lang=ALL-UNNAMED", "aisdata.Main"]

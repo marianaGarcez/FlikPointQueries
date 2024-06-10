@@ -4,9 +4,6 @@ import org.apache.flink.api.common.eventtime.SerializableTimestampAssigner;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.connector.jdbc.JdbcConnectionOptions;
-import org.apache.flink.connector.jdbc.JdbcExecutionOptions;
-import org.apache.flink.connector.jdbc.JdbcSink;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.windowing.time.Time;
@@ -22,30 +19,17 @@ import org.apache.flink.util.Collector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import types.basic.tbool.TBool;
-import types.basic.tbool.TBoolInst;
-import types.basic.tbool.TBoolSeq;
-import types.basic.tbool.TBoolSeqSet;
 import types.boxes.STBox;
-import types.collections.time.Period;
-import types.collections.time.PeriodSet;
-import types.collections.time.TimestampSet;
-import types.temporal.TInterpolation;
-import types.temporal.TSequence;
-import types.temporal.Temporal;
-import functions.functions.MeosLibrary;
 
 
 import java.time.Duration;
 import java.util.Properties;
 
-import javax.naming.Context;
-import functions.functions;
 
 public class Main {
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
-    TBoolInst tbi = new TBoolInst("True@2019-09-01");
-    private STBox stbx = new STBox("STBOX XT(((1, 1),(2, 2)),[2019-09-01,2019-09-02])");
+    public STBox stbx = new STBox("STBOX XT(((3.3615, 53.964367),(16.505853, 59.24544)),[2011-01-03 00:00:00,2011-01-03 00:00:21])");
+
 
     public static void main(String[] args) throws Exception {
 
@@ -97,50 +81,51 @@ public class Main {
                     .withIdleness(Duration.ofMinutes(1))
             );
 
-        DataStream<Tuple2<Integer, Double>> averageSpeedByMMSI = source
-            .map(new MapFunction<AISData, Tuple2<Integer, Double>>() {
+        //--------------------------------------------------------------------------------    
+
+        DataStream<Integer> countStBox = source
+            .map(new MapFunction<AISData, Tuple2<Double, Double>>() {
                 @Override
-                public Tuple2<Integer, Double> map(AISData value) throws Exception {
-                    logger.info("Mapping AISData to Tuple2: MMSI={}, Speed={}", value.getMmsi(), value.getSpeed());
-                    return new Tuple2<>(value.getMmsi(), value.getSpeed());
+                public Tuple2<Double, Double> map(AISData value) throws Exception {
+                    logger.info("Mapping AISData to Tuple2: Long={}, Latitude ={}, ", value.getLon(), value.getLat());
+                    return new Tuple2<>(value.getLon(), value.getLat());
                 }
             })
-            .keyBy(value -> value.f0)
+            .keyBy(value -> 1)
             .window(TumblingEventTimeWindows.of(Time.seconds(10)))
-            .aggregate(new AverageAggregator(), new ProcessWindowFunction<Tuple2<Integer, Double>, Tuple2<Integer, Double>, Integer, TimeWindow>() {
+            .aggregate(new CountAggregator(), new ProcessWindowFunction<Integer, Integer, Integer, TimeWindow>() {
                 @Override
-                public void process(Integer key, Context context, Iterable<Tuple2<Integer, Double>> elements, Collector<Tuple2<Integer, Double>> out) throws Exception {
-                    for (Tuple2<Integer, Double> element : elements) {
-                        logger.info("Processing window: key={}, value={}", key, element);
-                    }
-                    for (Tuple2<Integer, Double> element : elements) {
+                public void process(Integer key, Context context, Iterable<Integer> elements, Collector<Integer> out) throws Exception {
+                    for (Integer element : elements) {
+                        logger.info("Processing window value={}", element);
                         out.collect(element);
                     }
                 }
             });
 
         // Write results to PostgreSQL
-        averageSpeedByMMSI.addSink(JdbcSink.sink(
-            "INSERT INTO aissum (area, count, timestamp) VALUES (?, ?, ?)",            
-            (statement, tuple) -> {
-                statement.setInt(1, tuple.f0);
-                statement.setDouble(2, tuple.f1);
-                statement.setTimestamp(3, new java.sql.Timestamp(System.currentTimeMillis()));
-            },
-            JdbcExecutionOptions.builder()
-                .withBatchSize(1000)
-                .withBatchIntervalMs(200)
-                .withMaxRetries(5)
-                .build(),
-            new JdbcConnectionOptions.JdbcConnectionOptionsBuilder()
-                .withUrl("jdbc:postgresql://docker.for.mac.host.internal:5438/postgres")
-                .withDriverName("org.postgresql.Driver")
-                .withUsername("postgres")
-                .withPassword("postgres")
-                .build()
-        ));
+        // countStBox.addSink(JdbcSink.sink(
+        //     "INSERT INTO aissum (area, count, timestamp) VALUES (?, ?, ?)",            
+        //     (statement, tuple) -> {
+        //         statement.setString(1, "STBOX XT(((3.3615, 53.964367),(16.505853, 59.24544)),[2011-01-03 00:00:00,2011-01-03 00:00:21])");               
+        //         statement.setInt(2, tuple); 
+        //         statement.setTimestamp(3, new java.sql.Timestamp(System.currentTimeMillis()));
+        //     },
+        //     JdbcExecutionOptions.builder()
+        //         .withBatchSize(1000)
+        //         .withBatchIntervalMs(200)
+        //         .withMaxRetries(5)
+        //         .build(),
+        //     new JdbcConnectionOptions.JdbcConnectionOptionsBuilder()
+        //         .withUrl("jdbc:postgresql://docker.for.mac.host.internal:5438/mobilitydb")
+        //         .withDriverName("org.postgresql")
+        //         .withUsername("docker")
+        //         .withPassword("docker")
+        //         .build()
+        // ));
+        countStBox.print();
 
-        env.execute("Average Speed by MMSI");
+        env.execute("count Ships in a Temporal Box");
         logger.info("Done");
     }
 }

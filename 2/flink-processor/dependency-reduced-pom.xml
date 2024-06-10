@@ -40,6 +40,7 @@
                   <include>*:*</include>
                 </includes>
                 <excludes>
+                  <exclude>META-INF.versions.9.module-info</exclude>
                   <exclude>org.apache.flink:flink-shaded-force-shading</exclude>
                   <exclude>com.google.code.findbugs:jsr305</exclude>
                 </excludes>
@@ -92,7 +93,7 @@
       <artifactId>jmeos</artifactId>
       <version>1.0.0</version>
       <scope>system</scope>
-      <systemPath>${project.basedir}/jmeos/JMEOS.jar</systemPath>
+      <systemPath>${project.basedir}/jmeos/jar/JMEOS.jar</systemPath>
     </dependency>
   </dependencies>
   <properties>

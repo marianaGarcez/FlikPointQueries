@@ -1,6 +1,7 @@
+CREATE Extension IF NOT EXISTS MobilityDB CASCADE;
 
 CREATE TABLE vesselcountbyareaandtime (
-    area VARCHAR(255) NOT NULL,
-    count INTEGER NOT NULL
+    area STBOX NOT NULL,
+    count INTEGER NOT NULL,
     time TIMESTAMP NOT NULL
 );
