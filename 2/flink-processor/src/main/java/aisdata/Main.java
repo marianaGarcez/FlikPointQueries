@@ -19,7 +19,6 @@ import org.apache.flink.util.Collector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import types.boxes.STBox;
 
 
 import java.time.Duration;
@@ -28,7 +27,7 @@ import java.util.Properties;
 
 public class Main {
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
-    public STBox stbx = new STBox("STBOX XT(((3.3615, 53.964367),(16.505853, 59.24544)),[2011-01-03 00:00:00,2011-01-03 00:00:21])");
+    //public STBox stbx = new STBox("STBOX XT(((3.3615, 53.964367),(16.505853, 59.24544)),[2011-01-03 00:00:00,2011-01-03 00:00:21])");
 
 
     public static void main(String[] args) throws Exception {
