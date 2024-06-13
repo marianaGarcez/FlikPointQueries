@@ -16,7 +16,7 @@ RUN apt-get update && \
     apt-get install -y maven
 
 COPY target/flink-kafka2postgres-1.0-SNAPSHOT.jar /app/flink-kafka2postgres.jar
-COPY  jmeos/jar/JMEOS.jar /usr/local/jmeos/jar/JMEOS.jar
+COPY  /jar/JMEOS.jar /usr/local/jar/JMEOS.jar
 
 COPY wait-for-it.sh /app/wait-for-it.sh
 
