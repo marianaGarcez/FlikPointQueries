@@ -4,7 +4,6 @@ import org.apache.flink.api.common.functions.AggregateFunction;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import types.boxes.STBox;
 
 public class CountAggregator implements AggregateFunction<Tuple2<Double, Double>, Integer, Integer> {
 
@@ -37,16 +36,16 @@ public class CountAggregator implements AggregateFunction<Tuple2<Double, Double>
     static boolean isWithinStBox(double lat, double lon) {
         try {
             // Attempt to create an STBox instance from the string
-            STBox stbx = new STBox("STBOX XT(((3.3615, 53.964367),(16.505853, 59.24544)),[2011-01-03 00:00:00,2011-01-03 00:00:21])");
+           // STBox stbx = new STBox("STBOX XT(((3.3615, 53.964367),(16.505853, 59.24544)),[2011-01-03 00:00:00,2011-01-03 00:00:21])");
 
             // Log successful creation of the STBox
-            LOG.info("STBox created successfully: {}", stbx.toString());
+            //LOG.info("STBox created successfully: {}", stbx.toString());
 
             // Check if the point is within the STBox bounds (dummy check for example)
             // Replace with actual logic to check if the point is within the bounds
-            boolean withinBounds = checkIfWithinBounds(stbx, lat, lon);
+            boolean withinBounds = true;
 
-            LOG.info("Point ({}, {}) within bounds: {}", lat, lon, withinBounds);
+            //LOG.info("Point ({}, {}) within bounds: {}", lat, lon, withinBounds);
             return withinBounds;
         } catch (Exception e) {
             LOG.error("Error in isWithinStBox: ", e);
@@ -54,7 +53,4 @@ public class CountAggregator implements AggregateFunction<Tuple2<Double, Double>
         }
     }
 
-    static boolean checkIfWithinBounds(STBox stbx, double lat, double lon) {
-        return true;
-    }
 }

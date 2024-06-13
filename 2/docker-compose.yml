@@ -70,7 +70,6 @@ services:
     - 5438:5432
     networks:
       - bridge
-
 volumes:
   settings:
   data:

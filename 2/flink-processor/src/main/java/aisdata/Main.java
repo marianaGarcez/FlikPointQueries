@@ -16,6 +16,9 @@ import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindo
 import org.apache.flink.streaming.api.functions.windowing.ProcessWindowFunction;
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
 import org.apache.flink.util.Collector;
+import org.apache.flink.connector.jdbc.JdbcConnectionOptions;
+import org.apache.flink.connector.jdbc.JdbcExecutionOptions;
+import org.apache.flink.connector.jdbc.JdbcSink;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -101,28 +104,26 @@ public class Main {
                     }
                 }
             });
-
         // Write results to PostgreSQL
-        // countStBox.addSink(JdbcSink.sink(
-        //     "INSERT INTO aissum (area, count, timestamp) VALUES (?, ?, ?)",            
-        //     (statement, tuple) -> {
-        //         statement.setString(1, "STBOX XT(((3.3615, 53.964367),(16.505853, 59.24544)),[2011-01-03 00:00:00,2011-01-03 00:00:21])");               
-        //         statement.setInt(2, tuple); 
-        //         statement.setTimestamp(3, new java.sql.Timestamp(System.currentTimeMillis()));
-        //     },
-        //     JdbcExecutionOptions.builder()
-        //         .withBatchSize(1000)
-        //         .withBatchIntervalMs(200)
-        //         .withMaxRetries(5)
-        //         .build(),
-        //     new JdbcConnectionOptions.JdbcConnectionOptionsBuilder()
-        //         .withUrl("jdbc:postgresql://docker.for.mac.host.internal:5438/mobilitydb")
-        //         .withDriverName("org.postgresql")
-        //         .withUsername("docker")
-        //         .withPassword("docker")
-        //         .build()
-        // ));
-        countStBox.print();
+        countStBox.addSink(JdbcSink.sink(
+            "INSERT INTO vesselcountbyareaandtime (area, count, time) VALUES (?::stbox, ?, ?)",            
+            (statement, tuple) -> {
+                statement.setString(1, "STBOX XT(((1.0,2.0),(1.0,2.0)),[2001-01-03,2001-01-03])");               
+                statement.setInt(2, tuple); 
+                statement.setTimestamp(3, new java.sql.Timestamp(System.currentTimeMillis()));
+            },
+            JdbcExecutionOptions.builder()
+                .withBatchSize(1000)
+                .withBatchIntervalMs(200)
+                .withMaxRetries(5)
+                .build(),
+            new JdbcConnectionOptions.JdbcConnectionOptionsBuilder()
+                .withUrl("jdbc:postgresql://docker.for.mac.host.internal:5438/mobilitydb")
+                .withDriverName("org.postgresql.Driver")
+                .withPassword("docker")
+                .withUsername("docker")
+                .build()
+        ));
 
         env.execute("count Ships in a Temporal Box");
         logger.info("Done");
