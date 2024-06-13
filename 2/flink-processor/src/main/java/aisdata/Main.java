@@ -25,13 +25,14 @@ import org.slf4j.LoggerFactory;
 import java.time.Duration;
 import java.util.Properties;
 
+import javax.naming.Context;
+
 import static functions.functions.*;
 
 public class Main {
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
 
     public static void main(String[] args) throws Exception {
-        // Initialize MEOS
         meos_initialize("UTC");
 
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
@@ -53,54 +54,21 @@ public class Main {
 
         DataStream<String> rawStream = env.fromSource(kafkaSource, WatermarkStrategy.noWatermarks(), "Kafka Source");
 
-        rawStream.map(new MapFunction<String, String>() {
-            @Override
-            public String map(String value) throws Exception {
-                logger.info("Received message from Kafka: {}", value);
-                return value;
-            }
-        });
+        rawStream.map(new LogKafkaMessagesMapFunction());
 
         DataStream<AISData> source = rawStream
-            .map(new MapFunction<String, AISData>() {
-                @Override
-                public AISData map(String value) throws Exception {
-                    logger.info("Deserializing message: {}", value);
-                    return new AISDataDeserializationSchema().deserialize(value.getBytes());
-                }
-            })
+            .map(new DeserializeAISDataMapFunction())
             .assignTimestampsAndWatermarks(
                 WatermarkStrategy.<AISData>forBoundedOutOfOrderness(Duration.ofSeconds(10))
-                    .withTimestampAssigner(new SerializableTimestampAssigner<AISData>() {
-                        @Override
-                        public long extractTimestamp(AISData element, long recordTimestamp) {
-                            long timestamp = element.getTimestamp();
-                            logger.info("Extracted timestamp: {}", timestamp);
-                            return timestamp;
-                        }
-                    })
+                    .withTimestampAssigner(new AISDataTimestampAssigner())
                     .withIdleness(Duration.ofMinutes(1))
             );
 
         DataStream<Integer> countStBox = source
-            .map(new MapFunction<AISData, Tuple3<Double, Double, Long>>() {
-                @Override
-                public Tuple3<Double, Double, Long> map(AISData value) throws Exception {
-                    logger.info("Mapping AISData to 3: Long={}, Latitude ={},timestamp ", value.getLon(), value.getLat(), value.getTimestamp());
-                    return new Tuple3<>(value.getLon(), value.getLat(), value.getTimestamp());
-                }
-            })
+            .map(new AISDataToTupleMapFunction())
             .keyBy(value -> 1)
             .window(TumblingEventTimeWindows.of(Time.seconds(10)))
-            .aggregate(new CountAggregator(), new ProcessWindowFunction<Integer, Integer, Integer, TimeWindow>() {
-                @Override
-                public void process(Integer key, Context context, Iterable<Integer> elements, Collector<Integer> out) throws Exception {
-                    for (Integer element : elements) {
-                        logger.info("Processing window value={}", element);
-                        out.collect(element);
-                    }
-                }
-            });
+            .aggregate(new CountAggregator(), new ProcessCountWindowFunction());
 
         countStBox.addSink(JdbcSink.sink(
             "INSERT INTO vesselcountbyareaandtime (area, count, time) VALUES (?::stbox, ?, ?)",            
@@ -124,8 +92,78 @@ public class Main {
 
         env.execute("count Ships in a Temporal Box");
         logger.info("Done");
-
-        // Finalize MEOS
         meos_finalize();
     }
+
+    // Static nested classes to avoid serialization issues
+    public static class LogKafkaMessagesMapFunction implements MapFunction<String, String> {
+        private static final Logger logger = LoggerFactory.getLogger(LogKafkaMessagesMapFunction.class);
+
+        @Override
+        public String map(String value) throws Exception {
+            logger.info("Received message from Kafka: {}", value);
+            return value;
+        }
+    }
+
+    public static class DeserializeAISDataMapFunction implements MapFunction<String, AISData> {
+        private static final Logger logger = LoggerFactory.getLogger(DeserializeAISDataMapFunction.class);
+
+        @Override
+        public AISData map(String value) throws Exception {
+            logger.info("Deserializing message: {}", value);
+            return new AISDataDeserializationSchema().deserialize(value.getBytes());
+        }
+    }
+
+    public static class AISDataTimestampAssigner implements SerializableTimestampAssigner<AISData> {
+        private static final Logger logger = LoggerFactory.getLogger(AISDataTimestampAssigner.class);
+
+        @Override
+        public long extractTimestamp(AISData element, long recordTimestamp) {
+            long timestamp = element.getTimestamp();
+            logger.info("Extracted timestamp: {}", timestamp);
+            return timestamp;
+        }
+    }
+
+    public static class AISDataToTupleMapFunction implements MapFunction<AISData, Tuple3<Double, Double, Long>> {
+        private static final Logger logger = LoggerFactory.getLogger(AISDataToTupleMapFunction.class);
+
+        @Override
+        public Tuple3<Double, Double, Long> map(AISData value) throws Exception {
+            logger.info("Mapping AISData to Tuple3: Long={}, Latitude ={}, Timestamp={}", value.getLon(), value.getLat(), value.getTimestamp());
+            return new Tuple3<>(value.getLon(), value.getLat(), value.getTimestamp());
+        }
+    }
+
+    public static class ProcessCountWindowFunction extends ProcessWindowFunction<Integer, Integer, Integer, TimeWindow> {
+        private static final Logger logger = LoggerFactory.getLogger(ProcessCountWindowFunction.class);
+
+        @Override
+        public void process(Integer key, Context context, Iterable<Integer> elements, Collector<Integer> out) throws Exception {
+            for (Integer element : elements) {
+                logger.info("Processing window value={}", element);
+                out.collect(element);
+            }
+        }
+    }
+    
+    public static boolean isWithinStBox(double lat, double lon, Long t_out) {
+        try {
+            // Check if the point is within the STBox bounds (dummy check for example)
+            // Replace with actual logic to check if the point is within the bounds
+
+            //TGeogPointInst aPointInst = createPointInst(lat, lon, t_out);
+            boolean withinBounds = true;
+
+            //LOG.info("Point ({}, {}) within bounds: {}", lat, lon, withinBounds);
+            return withinBounds;
+            
+        } catch (Exception e) {
+            logger.error("Error in isWithinStBox: ", e);
+            return false;
+        }
+    }
+
 }
