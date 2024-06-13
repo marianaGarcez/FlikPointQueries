@@ -3,7 +3,7 @@ package aisdata;
 import org.apache.flink.api.common.eventtime.SerializableTimestampAssigner;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.functions.MapFunction;
-import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.windowing.time.Time;
@@ -22,18 +22,17 @@ import org.apache.flink.connector.jdbc.JdbcSink;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
-
 import java.time.Duration;
 import java.util.Properties;
 
+import static functions.functions.*;
 
 public class Main {
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
-    //public STBox stbx = new STBox("STBOX XT(((3.3615, 53.964367),(16.505853, 59.24544)),[2011-01-03 00:00:00,2011-01-03 00:00:21])");
-
 
     public static void main(String[] args) throws Exception {
+        // Initialize MEOS
+        meos_initialize("UTC");
 
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
@@ -83,14 +82,12 @@ public class Main {
                     .withIdleness(Duration.ofMinutes(1))
             );
 
-        //--------------------------------------------------------------------------------    
-
         DataStream<Integer> countStBox = source
-            .map(new MapFunction<AISData, Tuple2<Double, Double>>() {
+            .map(new MapFunction<AISData, Tuple3<Double, Double, Long>>() {
                 @Override
-                public Tuple2<Double, Double> map(AISData value) throws Exception {
-                    logger.info("Mapping AISData to Tuple2: Long={}, Latitude ={}, ", value.getLon(), value.getLat());
-                    return new Tuple2<>(value.getLon(), value.getLat());
+                public Tuple3<Double, Double, Long> map(AISData value) throws Exception {
+                    logger.info("Mapping AISData to 3: Long={}, Latitude ={},timestamp ", value.getLon(), value.getLat(), value.getTimestamp());
+                    return new Tuple3<>(value.getLon(), value.getLat(), value.getTimestamp());
                 }
             })
             .keyBy(value -> 1)
@@ -104,11 +101,11 @@ public class Main {
                     }
                 }
             });
-        // Write results to PostgreSQL
+
         countStBox.addSink(JdbcSink.sink(
             "INSERT INTO vesselcountbyareaandtime (area, count, time) VALUES (?::stbox, ?, ?)",            
             (statement, tuple) -> {
-                statement.setString(1, "STBOX XT(((1.0,2.0),(1.0,2.0)),[2001-01-03,2001-01-03])");               
+                statement.setString(1, "STBOX XT(((3.3615, 53.964367),(16.505853, 59.24544)),[2011-01-03 00:00:00,2011-01-03 00:00:21])");               
                 statement.setInt(2, tuple); 
                 statement.setTimestamp(3, new java.sql.Timestamp(System.currentTimeMillis()));
             },
@@ -127,5 +124,8 @@ public class Main {
 
         env.execute("count Ships in a Temporal Box");
         logger.info("Done");
+
+        // Finalize MEOS
+        meos_finalize();
     }
 }
