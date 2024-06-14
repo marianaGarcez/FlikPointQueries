@@ -5,6 +5,7 @@ import org.apache.flink.api.java.tuple.Tuple3;
 
 
 public class CountAggregator implements AggregateFunction<Tuple3<Double, Double, Long>, Integer, Integer> {
+
     @Override
     public Integer createAccumulator() {
         return 0;
@@ -28,4 +29,5 @@ public class CountAggregator implements AggregateFunction<Tuple3<Double, Double,
     public Integer merge(Integer a, Integer b) {
         return a + b;
     }
+
 }

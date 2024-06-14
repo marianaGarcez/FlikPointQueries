@@ -25,12 +25,16 @@ import org.slf4j.LoggerFactory;
 import java.time.Duration;
 import java.util.Properties;
 
-import javax.naming.Context;
-
+import types.boxes.*;
 import static functions.functions.*;
+import types.basic.tpoint.tgeom.TGeomPointInst;
+
+import javax.naming.OperationNotSupportedException;
+
 
 public class Main {
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
+    public static STBox stbx = new STBox("STBOX XT(((3.3615, 53.964367),(16.505853, 59.24544)),[2011-01-03 00:00:00,2011-01-03 00:00:21])");
 
     public static void main(String[] args) throws Exception {
         meos_initialize("UTC");
@@ -150,20 +154,13 @@ public class Main {
     }
     
     public static boolean isWithinStBox(double lat, double lon, Long t_out) {
-        try {
-            // Check if the point is within the STBox bounds (dummy check for example)
-            // Replace with actual logic to check if the point is within the bounds
+        String str_pointbuffer = String.format("POINT(%f %f)@%s", lon, lat, t_out);
 
-            //TGeogPointInst aPointInst = createPointInst(lat, lon, t_out);
-            boolean withinBounds = true;
-
-            //LOG.info("Point ({}, {}) within bounds: {}", lat, lon, withinBounds);
-            return withinBounds;
-            
-        } catch (Exception e) {
-            logger.error("Error in isWithinStBox: ", e);
-            return false;
-        }
+        TGeomPointInst inst = new TGeomPointInst(str_pointbuffer);
+        
+        boolean withinBounds = false;
+        return withinBounds;
     }
+
 
 }
