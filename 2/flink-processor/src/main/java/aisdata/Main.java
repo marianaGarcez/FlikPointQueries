@@ -1,44 +1,52 @@
 package aisdata;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.Properties;
+
+import javax.naming.Context;
+import javax.naming.OperationNotSupportedException;
+
 import org.apache.flink.api.common.eventtime.SerializableTimestampAssigner;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.functions.MapFunction;
-import org.apache.flink.api.java.tuple.Tuple3;
-import org.apache.flink.streaming.api.datastream.DataStream;
-import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.api.windowing.time.Time;
-import org.apache.flink.connector.kafka.source.KafkaSource;
-import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.common.serialization.StringDeserializer;
-import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
-import org.apache.flink.streaming.api.functions.windowing.ProcessWindowFunction;
-import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
-import org.apache.flink.util.Collector;
+import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.connector.jdbc.JdbcConnectionOptions;
 import org.apache.flink.connector.jdbc.JdbcExecutionOptions;
 import org.apache.flink.connector.jdbc.JdbcSink;
+import org.apache.flink.connector.kafka.source.KafkaSource;
+import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
+import org.apache.flink.streaming.api.datastream.DataStream;
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.streaming.api.functions.windowing.ProcessWindowFunction;
+import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
+import org.apache.flink.streaming.api.windowing.time.Time;
+import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
+import org.apache.flink.util.Collector;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.common.serialization.StringDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.time.Duration;
-import java.util.Properties;
-
-import types.boxes.*;
-import static functions.functions.*;
+import static functions.functions.meos_finalize;
+import static functions.functions.meos_initialize;
+import static functions.functions.eintersects_tpoint_geo;
+import static functions.functions.stbox_to_geo;
+import jnr.ffi.Pointer;
 import types.basic.tpoint.tgeom.TGeomPointInst;
+import types.boxes.STBox;
 
-import javax.naming.OperationNotSupportedException;
+
 
 
 public class Main {
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
-    public static STBox stbx = new STBox("STBOX XT(((3.3615, 53.964367),(16.505853, 59.24544)),[2011-01-03 00:00:00,2011-01-03 00:00:21])");
-
     public static void main(String[] args) throws Exception {
         meos_initialize("UTC");
-
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
         Properties properties = new Properties();
@@ -152,15 +160,34 @@ public class Main {
             }
         }
     }
-    
-    public static boolean isWithinStBox(double lat, double lon, Long t_out) {
-        String str_pointbuffer = String.format("POINT(%f %f)@%s", lon, lat, t_out);
 
-        TGeomPointInst inst = new TGeomPointInst(str_pointbuffer);
+    public static String convertMillisToTimestamp(long millis) {
+        Instant instant = Instant.ofEpochMilli(millis);
+        LocalDateTime dateTime = LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
+        return dateTime.format(formatter);
+    }
+    
+    public static int isWithinStBox(double lat, double lon, Long t_out) {
+        logger.info("Initializing MEOS library");
+        meos_initialize("UTC");
         
-        boolean withinBounds = false;
+        STBox stbx = new STBox("STBOX XT(((3.3615, 53.964367),(16.505853, 59.24544)),[2011-01-03 00:00:00,2011-01-03 00:00:21])");
+        String t = convertMillisToTimestamp(t_out);
+        String str_pointbuffer = String.format("SRID=4326;POINT(%f %f)@%s", lon, lat, t);
+        TGeomPointInst point = new TGeomPointInst(str_pointbuffer);
+    
+        logger.info("CreatePoint: {}", str_pointbuffer);
+    
+        int withinBounds = 0;
+        Pointer pointPtr = point.getPointInner();
+        Pointer stboxPtr = ((STBox) stbx).get_inner();
+        withinBounds = eintersects_tpoint_geo(pointPtr, stboxPtr);
+        logger.info("Intersection check completed: {}", withinBounds);
+    
         return withinBounds;
     }
+    
 
 
 }

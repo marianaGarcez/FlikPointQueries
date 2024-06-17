@@ -13,12 +13,15 @@ public class CountAggregator implements AggregateFunction<Tuple3<Double, Double,
 
     @Override
     public Integer add(Tuple3<Double, Double, Long > value, Integer accumulator) {
-        if (Main.isWithinStBox(value.f0, value.f1, value.f2)) {
+        int result = Main.isWithinStBox(value.f0, value.f1, value.f2);
+        if (result > 0)  {
             return accumulator + 1;
         } else {
             return accumulator;
         }
     }
+
+    
 
     @Override
     public Integer getResult(Integer accumulator) {
