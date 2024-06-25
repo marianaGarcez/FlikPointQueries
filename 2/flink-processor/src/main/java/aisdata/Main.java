@@ -7,17 +7,11 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Properties;
 
-import javax.naming.Context;
-import javax.naming.OperationNotSupportedException;
-
 import org.apache.flink.api.common.eventtime.SerializableTimestampAssigner;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.api.java.tuple.Tuple3;
-import org.apache.flink.connector.jdbc.JdbcConnectionOptions;
-import org.apache.flink.connector.jdbc.JdbcExecutionOptions;
-import org.apache.flink.connector.jdbc.JdbcSink;
 import org.apache.flink.connector.kafka.source.KafkaSource;
 import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
 import org.apache.flink.streaming.api.datastream.DataStream;
@@ -34,9 +28,6 @@ import org.slf4j.LoggerFactory;
 
 import static functions.functions.meos_finalize;
 import static functions.functions.meos_initialize;
-import static functions.functions.eintersects_tpoint_geo;
-import static functions.functions.stbox_to_geo;
-import jnr.ffi.Pointer;
 import types.basic.tpoint.tgeom.TGeomPointInst;
 import types.boxes.STBox;
 
@@ -82,26 +73,27 @@ public class Main {
             .window(TumblingEventTimeWindows.of(Time.seconds(10)))
             .aggregate(new CountAggregator(), new ProcessCountWindowFunction());
 
-        countStBox.addSink(JdbcSink.sink(
-            "INSERT INTO vesselcountbyareaandtime (area, count, time) VALUES (?::stbox, ?, ?)",            
-            (statement, tuple) -> {
-                statement.setString(1, "STBOX XT(((3.3615, 53.964367),(16.505853, 59.24544)),[2011-01-03 00:00:00,2011-01-03 00:00:21])");               
-                statement.setInt(2, tuple); 
-                statement.setTimestamp(3, new java.sql.Timestamp(System.currentTimeMillis()));
-            },
-            JdbcExecutionOptions.builder()
-                .withBatchSize(1000)
-                .withBatchIntervalMs(200)
-                .withMaxRetries(5)
-                .build(),
-            new JdbcConnectionOptions.JdbcConnectionOptionsBuilder()
-                .withUrl("jdbc:postgresql://docker.for.mac.host.internal:5438/mobilitydb")
-                .withDriverName("org.postgresql.Driver")
-                .withPassword("docker")
-                .withUsername("docker")
-                .build()
-        ));
-
+        // countStBox.addSink(JdbcSink.sink(
+        //     "INSERT INTO vesselcountbyareaandtime (area, count, time) VALUES (?::stbox, ?, ?)",            
+        //     (statement, tuple) -> {
+        //         statement.setString(1, "STBOX XT(((3.3615, 53.964367),(16.505853, 59.24544)),[2011-01-03 00:00:00,2011-01-03 00:00:21])");               
+        //         statement.setInt(2, tuple); 
+        //         statement.setTimestamp(3, new java.sql.Timestamp(System.currentTimeMillis()));
+        //     },
+        //     JdbcExecutionOptions.builder()
+        //         .withBatchSize(1000)
+        //         .withBatchIntervalMs(200)
+        //         .withMaxRetries(5)
+        //         .build(),
+        //     new JdbcConnectionOptions.JdbcConnectionOptionsBuilder()
+        //         .withUrl("jdbc:postgresql://docker.for.mac.host.internal:5438/mobilitydb")
+        //         .withDriverName("org.postgresql.Driver")
+        //         .withPassword("docker")
+        //         .withUsername("docker")
+        //         .build()
+        // ));
+        countStBox.print();
+            
         env.execute("count Ships in a Temporal Box");
         logger.info("Done");
         meos_finalize();
@@ -180,10 +172,10 @@ public class Main {
         logger.info("CreatePoint: {}", str_pointbuffer);
     
         int withinBounds = 0;
-        Pointer pointPtr = point.getPointInner();
-        Pointer stboxPtr = ((STBox) stbx).get_inner();
-        withinBounds = eintersects_tpoint_geo(pointPtr, stboxPtr);
-        logger.info("Intersection check completed: {}", withinBounds);
+        //Pointer pointPtr = point.getPointInner();
+        //Pointer stboxPtr = ((STBox) stbx).get_inner();
+        //withinBounds = eintersects_tpoint_geo(pointPtr, stboxPtr);
+        //logger.info("Intersection check completed: {}", withinBounds);
     
         return withinBounds;
     }
