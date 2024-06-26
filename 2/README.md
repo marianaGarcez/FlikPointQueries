@@ -6,13 +6,13 @@ This query is a spatiotemporal aggregation. We count the number of distinct vess
 
 ## To compile
 cd postgres
-docker build -t postgres .
+docker build -t postgres2 .
 cd ..
 cd kafka-producer
-docker build -t kafka-producer .
+docker build -t kafka-producer2 .
 cd ..
 cd flink-processor
 mvn clean package  
-docker build -t flink-processor .
+docker build -t flink-processor2 .
 cd ..
 docker-compose up -d 

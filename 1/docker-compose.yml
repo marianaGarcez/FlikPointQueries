@@ -32,7 +32,7 @@ services:
           - kafka
 
   kafka-producer:
-    image: kafka-producer
+    image: kafka-producer1
     depends_on:
     - kafka
     environment:
@@ -43,7 +43,7 @@ services:
     - bridge
 
   flink-processor:
-    image: flink-processor
+    image: flink-processor1
     depends_on:
     - kafka
     environment:
@@ -56,7 +56,7 @@ services:
   postgres:
     build:
       context: ./postgres
-    container_name: postgres
+    container_name: postgres1
     restart: always
     environment:
         - POSTGRES_USER=postgres

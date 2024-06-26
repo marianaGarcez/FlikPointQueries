@@ -1,5 +1,4 @@
 FROM debian:bookworm-slim
-MAINTAINER nidhalmareghni8@gmail.com
 
 # Install necessary packages
 RUN apt-get update \

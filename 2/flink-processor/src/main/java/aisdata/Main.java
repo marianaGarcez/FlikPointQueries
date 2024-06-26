@@ -161,7 +161,7 @@ public class Main {
     }
     
     public static int isWithinStBox(double lat, double lon, Long t_out) {
-        logger.info("Initializing MEOS library");
+        //logger.info("Initializing MEOS library");
         meos_initialize("UTC");
         
         STBox stbx = new STBox("STBOX XT(((3.3615, 53.964367),(16.505853, 59.24544)),[2011-01-03 00:00:00,2011-01-03 00:00:21])");

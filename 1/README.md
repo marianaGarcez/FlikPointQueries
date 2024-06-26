@@ -7,13 +7,13 @@ It is an aggregation query. Within this query, we calculate the average speed of
 
 ## To compile
 cd postgres
-docker build -t postgres .
+docker build -t postgres1 .
 cd ..
 cd kafka-producer
-docker build -t kafka-producer .
+docker build -t kafka-producer1 .
 cd ..
 cd flink-processor
 mvn clean package  
-docker build -t flink-processor .
+docker build -t flink-processor1 .
 cd ..
 docker-compose up -d 

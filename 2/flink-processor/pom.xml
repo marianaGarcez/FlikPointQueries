@@ -165,9 +165,6 @@
                 <configuration>
                     <source>${target.java.version}</source>
                     <target>${target.java.version}</target>
-                    <compilerArgs>
-                        <arg>-Xlint:deprecation</arg>
-                    </compilerArgs>
                 </configuration>
             </plugin>
             <plugin>
