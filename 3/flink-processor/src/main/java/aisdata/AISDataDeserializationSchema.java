@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
+
 public class AISDataDeserializationSchema implements DeserializationSchema<AISData> {
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -41,6 +42,7 @@ public class AISDataDeserializationSchema implements DeserializationSchema<AISDa
         LocalDateTime dateTime = LocalDateTime.parse(timestampStr, formatter);
         return dateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
     }
+
 
     @Override
     public boolean isEndOfStream(AISData nextElement) {

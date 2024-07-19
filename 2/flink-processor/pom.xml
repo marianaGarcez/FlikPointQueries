@@ -16,7 +16,7 @@
         <junit.jupiter.version>5.8.2</junit.jupiter.version>
         <kafka.version>3.2.0</kafka.version>
         <log4j.version>2.17.2</log4j.version>
-        <target.java.version>8</target.java.version>
+        <target.java.version>21</target.java.version>
     </properties>
 
     <dependencies>
