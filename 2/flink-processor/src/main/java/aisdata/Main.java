@@ -173,10 +173,9 @@ public class Main {
     
         logger.info("CreatePoint: {}", str_pointbuffer);
     
-        int withinBounds = 0;
-        //Pointer pointPtr = point.getPointInner();
-        //Pointer stboxPtr = ((STBox) stbx).get_inner();
-        //withinBounds = eintersects_tpoint_geo(pointPtr, stboxPtr);
+        Pointer pointPtr = point.getPointInner();
+        Pointer stboxPtr = ((STBox) stbx).get_inner();
+        int withinBounds = eintersects_tpoint_geo(pointPtr, stboxPtr);
         //logger.info("Intersection check completed: {}", withinBounds);
     
         return withinBounds;
