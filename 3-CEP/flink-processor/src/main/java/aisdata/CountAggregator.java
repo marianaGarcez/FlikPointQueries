@@ -13,14 +13,19 @@ public class CountAggregator implements AggregateFunction<Tuple3<Double, Double,
 
     @Override
     public Integer add(Tuple3<Double, Double, Long > value, Integer accumulator) {
-        int result = MainAISDataTimestampAssignerithinStBox(value.f0, value.f1, value.f2);
-        if (result > 0)  {
-            return accumulator + 1;
-        } else {
+        boolean result = Main.isWithinStBox(value.f0, value.f1, value.f2);
+        // now check if it was true before, and now it is false, the ship left the box
+        if (result == true) {
             return accumulator;
+            
+        // now check if it was false before, and now it is true, the ship entered the box
+        } else if (result == false) {
+            return accumulator + 1;
         }
+        return accumulator;
     }
 
+    
 
     @Override
     public Integer getResult(Integer accumulator) {

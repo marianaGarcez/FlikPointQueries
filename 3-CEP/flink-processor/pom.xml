@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>Mariana</groupId>
-    <artifactId>flink-kafka3postgres</artifactId>
+    <artifactId>flink-kafka2postgres</artifactId>
     <version>1.0-SNAPSHOT</version>
 
     <properties>
@@ -49,6 +49,12 @@
         <dependency>
             <groupId>org.apache.flink</groupId>
             <artifactId>flink-connector-jdbc</artifactId>
+            <version>${flink.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-cep</artifactId>
             <version>${flink.version}</version>
         </dependency>
 

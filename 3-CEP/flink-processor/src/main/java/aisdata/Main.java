@@ -5,9 +5,8 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Properties;
-
-import javax.naming.Context;
 
 import org.apache.flink.api.common.eventtime.SerializableTimestampAssigner;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
@@ -19,7 +18,7 @@ import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsIni
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.windowing.ProcessWindowFunction;
-import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
+import org.apache.flink.streaming.api.windowing.assigners.SlidingEventTimeWindows;
 import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
 import org.apache.flink.util.Collector;
@@ -28,12 +27,17 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.flink.cep.CEP;
+import org.apache.flink.cep.PatternSelectFunction;
+import org.apache.flink.cep.PatternStream;
+import org.apache.flink.cep.pattern.Pattern;
+import org.apache.flink.cep.pattern.conditions.IterativeCondition;
+import org.apache.flink.cep.pattern.conditions.IterativeCondition.Context;
+
 import static functions.functions.meos_finalize;
 import static functions.functions.meos_initialize;
 import types.basic.tpoint.tgeom.TGeomPointInst;
 import types.boxes.STBox;
-
-
 
 
 public class Main {
@@ -69,32 +73,88 @@ public class Main {
                     .withIdleness(Duration.ofMinutes(1))
             );
 
-        DataStream<Integer> countStBox = source
-            .map(new AISDataToTupleMapFunction())
-            .keyBy(value -> 1)
-            .window(TumblingEventTimeWindows.of(Time.seconds(10)))
-            .aggregate(new CountAggregator(), new ProcessCountWindowFunction());
 
-        // countStBox.addSink(JdbcSink.sink(
-        //     "INSERT INTO vesselcountbyareaandtime (area, count, time) VALUES (?::stbox, ?, ?)",            
-        //     (statement, tuple) -> {
-        //         statement.setString(1, "STBOX XT(((3.3615, 53.964367),(16.505853, 59.24544)),[2011-01-03 00:00:00,2011-01-03 00:00:21])");               
-        //         statement.setInt(2, tuple); 
-        //         statement.setTimestamp(3, new java.sql.Timestamp(System.currentTimeMillis()));
-        //     },
-        //     JdbcExecutionOptions.builder()
-        //         .withBatchSize(1000)
-        //         .withBatchIntervalMs(200)
-        //         .withMaxRetries(5)
-        //         .build(),
-        //     new JdbcConnectionOptions.JdbcConnectionOptionsBuilder()
-        //         .withUrl("jdbc:postgresql://docker.for.mac.host.internal:5438/mobilitydb")
-        //         .withDriverName("org.postgresql.Driver")
-        //         .withPassword("docker")
-        //         .withUsername("docker")
-        //         .build()
-        // ));
-        countStBox.print();
+        // Define the port area
+        double portLatMin = 53.964367;
+        double portLatMax = 59.24544;
+        double portLonMin = 3.3615;
+        double portLonMax = 16.505853;
+
+        // DataStream<Integer> countStBox = source
+        //     .map(new AISDataToTupleMapFunction())
+        //     .keyBy(value -> 1)
+        //     .window(SlidingEventTimeWindows.of(Time.seconds(10), Time.seconds(5)))
+        //     .aggregate(new CountAggregator(), new ProcessCountWindowFunction());
+
+        
+        // countStBox.print();
+
+        // Define the CEP pattern for arrival
+        Pattern<AISData, ?> arrivalPattern = Pattern.<AISData>begin("enterPort")
+        .where(new IterativeCondition<AISData>() {
+            @Override
+            public boolean filter(AISData event, Context<AISData> ctx) throws Exception {
+                return event.getLat() >= portLatMin && event.getLat() <= portLatMax
+                    && event.getLon() >= portLonMin && event.getLon() <= portLonMax;
+            }
+        })
+        .next("insidePort")
+        .where(new IterativeCondition<AISData>() {
+            @Override
+            public boolean filter(AISData event, Context<AISData> ctx) throws Exception {
+                return event.getLat() >= portLatMin && event.getLat() <= portLatMax
+                    && event.getLon() >= portLonMin && event.getLon() <= portLonMax;
+            }
+        })
+        .within(Time.minutes(10));
+
+        // Define the CEP pattern for departure
+        Pattern<AISData, ?> departurePattern = Pattern.<AISData>begin("insidePort")
+        .where(new IterativeCondition<AISData>() {
+            @Override
+            public boolean filter(AISData event, Context<AISData> ctx) throws Exception {
+                return event.getLat() >= portLatMin && event.getLat() <= portLatMax
+                    && event.getLon() >= portLonMin && event.getLon() <= portLonMax;
+            }
+        })
+        .next("leavePort")
+        .where(new IterativeCondition<AISData>() {
+            @Override
+            public boolean filter(AISData event, Context<AISData> ctx) throws Exception {
+                return event.getLat() < portLatMin || event.getLat() > portLatMax
+                    || event.getLon() < portLonMin || event.getLon() > portLonMax;
+            }
+        })
+        .within(Time.minutes(10));
+        
+        // Apply the pattern on the AIS data stream for arrival and departure detection
+        PatternStream<AISData> arrivalPatternStream = CEP.pattern(source.keyBy(AISData::getMmsi), arrivalPattern);
+        PatternStream<AISData> departurePatternStream = CEP.pattern(source.keyBy(AISData::getMmsi), departurePattern);
+
+        DataStream<String> arrivalStream = arrivalPatternStream.select(
+            (PatternSelectFunction<AISData, String>) pattern -> {
+                List<AISData> enterPortList = pattern.get("enterPort");
+                if (enterPortList != null && !enterPortList.isEmpty()) {
+                    AISData enterPort = enterPortList.get(0);
+                    return "Vessel " + enterPort.getMmsi() + " arrived at port at " + enterPort.getTimestamp();
+                }
+                return "No arrival event detected";
+            });
+
+    DataStream<String> departureStream = departurePatternStream.select(
+        (PatternSelectFunction<AISData, String>) pattern -> {
+            List<AISData> leavePortList = pattern.get("leavePort");
+            if (leavePortList != null && !leavePortList.isEmpty()) {
+                AISData leavePort = leavePortList.get(0);
+                return "Vessel " + leavePort.getMmsi() + " departed from port at " + leavePort.getTimestamp();
+            }
+            return "No departure event detected";
+        });
+
+        // Print the results (or sink to a file, database, etc.)
+        arrivalStream.print();
+        departureStream.print();
+        
             
         env.execute("count Ships in a Temporal Box");
         logger.info("Done");
@@ -162,7 +222,7 @@ public class Main {
         return dateTime.format(formatter);
     }
     
-    public static int isWithinStBox(double lat, double lon, Long t_out) {
+    public static boolean isWithinStBox(double lat, double lon, Long t_out) {
         //logger.info("Initializing MEOS library");
         meos_initialize("UTC");
         
@@ -173,9 +233,10 @@ public class Main {
     
         logger.info("CreatePoint: {}", str_pointbuffer);
     
-        Pointer pointPtr = point.getPointInner();
-        Pointer stboxPtr = ((STBox) stbx).get_inner();
-        int withinBounds = eintersects_tpoint_geo(pointPtr, stboxPtr);
+        boolean withinBounds = true;
+        //Pointer pointPtr = point.getPointInner();
+        //Pointer stboxPtr = ((STBox) stbx).get_inner();
+        //withinBounds = eintersects_tpoint_geo(pointPtr, stboxPtr);
         //logger.info("Intersection check completed: {}", withinBounds);
     
         return withinBounds;

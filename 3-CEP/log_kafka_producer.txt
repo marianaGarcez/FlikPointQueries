@@ -1,0 +1,47 @@
+marianaduarte@Marianas-MacBook-Pro data-streaming-kafka-flink-postgres % docker ps -a
+CONTAINER ID   IMAGE                              COMMAND                  CREATED         STATUS                        PORTS                              NAMES
+dad685227bdf   kafka-producer                     "/bin/sh -c './wait-…"   4 minutes ago   Up 4 minutes                                                     data-streaming-kafka-flink-postgres-kafka-producer-1
+615b28404fb9   confluentinc/cp-kafka              "/etc/confluent/dock…"   4 minutes ago   Up 4 minutes                  9092/tcp                           data-streaming-kafka-flink-postgres-kafka-1
+66073382b4cf   confluentinc/cp-zookeeper:latest   "/etc/confluent/dock…"   4 minutes ago   Up 4 minutes                  2181/tcp, 2888/tcp, 3888/tcp       data-streaming-kafka-flink-postgres-zookeeper-1
+e82211928f9b   gdejaege213/bwcdr:notebook         "docker-entrypoint.s…"   30 hours ago    Exited (255) 16 minutes ago   5432/tcp, 8080/tcp                 boring_lumiere
+001ce591b2ae   gdejaege213/bwcdr:notebook         "docker-entrypoint.s…"   5 weeks ago     Exited (0) 5 weeks ago                                           xenodochial_kare
+07983081455d   gdejaege213/bwcdr:notebook         "docker-entrypoint.s…"   5 weeks ago     Exited (255) 3 days ago       5432/tcp, 0.0.0.0:8083->8080/tcp   jolly_ishizaka
+
+marianaduarte@Marianas-MacBook-Pro data-streaming-kafka-flink-postgres % docker logs --tail 2000 dad685227bdf
+wait-for-it.sh: waiting 30 seconds for zookeeper:32181
+wait-for-it.sh: zookeeper:32181 is available after 3 seconds
+wait-for-it.sh: waiting 30 seconds for kafka:9092
+wait-for-it.sh: kafka:9092 is available after 4 seconds
+{'city': 'Jennifershire', 'temperature': 33.02572987236236}
+{'city': 'Davidsonborough', 'temperature': 50.084854473968235}
+{'city': 'South Tiffany', 'temperature': 91.8458945811457}
+{'city': 'Davidfort', 'temperature': 45.697633025963725}
+{'city': 'Stevensmouth', 'temperature': 64.94309643468978}
+{'city': 'North Annshire', 'temperature': 68.09366011041179}
+{'city': 'Michelleport', 'temperature': 38.95994122237573}
+{'city': 'West Brandonside', 'temperature': 39.86307954631767}
+{'city': 'Lake Jennifer', 'temperature': 108.04929744635683}
+{'city': 'North Jose', 'temperature': 104.1040743457197}
+{'city': 'East Lynn', 'temperature': 48.09362244100989}
+{'city': 'Jessicafort', 'temperature': 97.34189906924355}
+{'city': 'East Patriciaberg', 'temperature': 103.3045887483165}
+{'city': 'Michaelfort', 'temperature': 91.69130338471665}
+{'city': 'North Danielmouth', 'temperature': 41.50346120377658}
+{'city': 'Lake Carrie', 'temperature': 88.11415292743378}
+{'city': 'Port Lisaport', 'temperature': 26.559449967393324}
+{'city': 'West Ronald', 'temperature': 89.10062455652277}
+{'city': 'Evanshaven', 'temperature': 91.5900022003895}
+{'city': 'Samanthaberg', 'temperature': 89.43599401319489}
+{'city': 'North Leah', 'temperature': 73.05805868213372}
+{'city': 'Lake Ryanfurt', 'temperature': 56.38596706151515}
+{'city': 'West Joe', 'temperature': 64.06106447646667}
+{'city': 'Andersonton', 'temperature': 88.54295179165828}
+{'city': 'North Sarah', 'temperature': 90.85774695554568}
+{'city': 'Christopherview', 'temperature': 45.094712885235424}
+{'city': 'South Natalietown', 'temperature': 89.7602657534042}
+{'city': 'Janicehaven', 'temperature': 28.369703367413003}
+{'city': 'Craigport', 'temperature': 21.67163544709591}
+{'city': 'East Miranda', 'temperature': 47.4697869359604}
+{'city': 'New Christopherville', 'temperature': 66.12316972676405}
+{'city': 'South Danielle', 'temperature': 76.13525342551955}
+{'city': 'South Barbara', 'temperature': 84.48883953126678}
