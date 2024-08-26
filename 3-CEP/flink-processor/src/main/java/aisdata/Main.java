@@ -1,18 +1,23 @@
 package aisdata;
 
+import java.sql.Time;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
+
+import javax.naming.Context;
 
 import org.apache.flink.api.common.eventtime.SerializableTimestampAssigner;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.api.java.tuple.Tuple3;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.connector.kafka.source.KafkaSource;
 import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
 import org.apache.flink.streaming.api.datastream.DataStream;
@@ -22,10 +27,31 @@ import org.apache.flink.streaming.api.windowing.assigners.SlidingEventTimeWindow
 import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
 import org.apache.flink.util.Collector;
+import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import main.java.aisdata.GridCell;
+import main.java.aisdata.HeatmapData;
+
+import org.apache.kafka.common.serialization.StringDeserializer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import main.java.aisdata.GridCell;
+import main.java.aisdata.HeatmapData;
+
+import org.apache.kafka.common.serialization.StringDeserializer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import aisdata.LogKafkaMessagesMapFunction.AISDataTimestampAssigner;
+import aisdata.Main.AISDataToTupleMapFunction;
+import aisdata.Main.DeserializeAISDataMapFunction;
+
+import main.java.aisdata.GridCell;
 
 import org.apache.flink.cep.CEP;
 import org.apache.flink.cep.PatternSelectFunction;
@@ -79,15 +105,6 @@ public class Main {
         double portLatMax = 59.24544;
         double portLonMin = 3.3615;
         double portLonMax = 16.505853;
-
-        // DataStream<Integer> countStBox = source
-        //     .map(new AISDataToTupleMapFunction())
-        //     .keyBy(value -> 1)
-        //     .window(SlidingEventTimeWindows.of(Time.seconds(10), Time.seconds(5)))
-        //     .aggregate(new CountAggregator(), new ProcessCountWindowFunction());
-
-        
-        // countStBox.print();
 
         // Define the CEP pattern for arrival
         Pattern<AISData, ?> arrivalPattern = Pattern.<AISData>begin("enterPort")
@@ -221,27 +238,4 @@ public class Main {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
         return dateTime.format(formatter);
     }
-    
-    public static boolean isWithinStBox(double lat, double lon, Long t_out) {
-        //logger.info("Initializing MEOS library");
-        meos_initialize("UTC");
-        
-        STBox stbx = new STBox("STBOX XT(((3.3615, 53.964367),(16.505853, 59.24544)),[2011-01-03 00:00:00,2011-01-03 00:00:21])");
-        String t = convertMillisToTimestamp(t_out);
-        String str_pointbuffer = String.format("SRID=4326;POINT(%f %f)@%s", lon, lat, t);
-        TGeomPointInst point = new TGeomPointInst(str_pointbuffer);
-    
-        logger.info("CreatePoint: {}", str_pointbuffer);
-    
-        boolean withinBounds = true;
-        //Pointer pointPtr = point.getPointInner();
-        //Pointer stboxPtr = ((STBox) stbx).get_inner();
-        //withinBounds = eintersects_tpoint_geo(pointPtr, stboxPtr);
-        //logger.info("Intersection check completed: {}", withinBounds);
-    
-        return withinBounds;
-    }
-    
-
-
 }

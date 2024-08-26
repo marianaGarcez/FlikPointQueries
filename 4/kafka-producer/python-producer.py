@@ -5,7 +5,7 @@ import pandas as pd
 
 
 kafka_nodes = "kafka:9092"
-myTopic = "aisdata"
+myTopic = "aisdata4"
 
 def gen_data():
   df = pd.read_csv('aisdk_20110301_2000.csv')

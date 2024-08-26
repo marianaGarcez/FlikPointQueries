@@ -32,7 +32,7 @@ services:
           - kafka
 
   kafka-producer:
-    image: kafka-producer
+    image: kafka-producer4
     depends_on:
     - kafka
     environment:
@@ -43,7 +43,7 @@ services:
     - bridge
 
   flink-processor:
-    image: flink-processor
+    image: flink-processor4
     depends_on:
     - kafka
     environment:
@@ -56,12 +56,12 @@ services:
   postgres:
     build:
       context: ./postgres
-    container_name: postgres
+    container_name: postgres4
     restart: always
     environment:
-        - POSTGRES_USER=postgres
-        - POSTGRES_PASSWORD=postgres
-        - POSTGRES_DB=postgres
+        - POSTGRES_USER=docker
+        - POSTGRES_PASSWORD=docker
+        - POSTGRES_DB=mobilitydb
     logging:
         options:
             max-size: 10m
@@ -70,7 +70,6 @@ services:
     - 5438:5432
     networks:
       - bridge
-
 volumes:
   settings:
   data:

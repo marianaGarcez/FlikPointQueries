@@ -1,7 +1,7 @@
+CREATE Extension IF NOT EXISTS MobilityDB CASCADE;
 
-
-CREATE TABLE aissum (
-    mmsi BIGINT PRIMARY KEY,
-    speed FLOAT,
-    timestamp TIMESTAMP
+CREATE TABLE vesselcountbyareaandtime (
+    area STBOX NOT NULL,
+    count INTEGER NOT NULL,
+    time TIMESTAMP NOT NULL
 );
