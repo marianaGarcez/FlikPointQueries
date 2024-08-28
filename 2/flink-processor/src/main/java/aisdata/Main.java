@@ -6,11 +6,10 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Properties;
-import java.util.regex.Pattern;
+import jnr.ffi.Pointer;
 
 import javax.naming.Context;
-
-import javax.naming.Context;
+import javax.naming.OperationNotSupportedException;
 
 import org.apache.flink.api.common.eventtime.SerializableTimestampAssigner;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
@@ -31,22 +30,22 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import aisdata.LogKafkaMessagesMapFunction.AISDataTimestampAssigner;
-import aisdata.LogKafkaMessagesMapFunction.DeserializeAISDataMapFunction;
-import aisdata.LogKafkaMessagesMapFunction.LogKafkaMessagesMapFunction;
+import functions.*;
+import types.boxes.*;
+import types.basic.tpoint.tgeom.*;
+import types.basic.tpoint.TPoint.*;
 
-import static functions.functions.meos_finalize;
-import static functions.functions.meos_initialize;
-import types.basic.tpoint.tgeom.TGeomPointInst;
-import types.boxes.STBox;
+import java.sql.SQLException;
+import java.util.stream.Stream;
 
+public class Main {
+    private static final Logger logger = LoggerFactory.getLogger(Main.class);
+    static error_handler_fn errorHandler = new error_handler();
+    private STBox stbx; 
 
-
-
-public class LogKafkaMessagesMapFunction {
-    private static final Logger logger = LoggerFactory.getLogger(LogKafkaMessagesMapFunction.class);
     public static void main(String[] args) throws Exception {
-        //meos_initialize("UTC");
+
+        functions.meos_initialize("UTC", errorHandler);
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
         Properties properties = new Properties();
@@ -72,7 +71,7 @@ public class LogKafkaMessagesMapFunction {
             .map(new DeserializeAISDataMapFunction())
             .assignTimestampsAndWatermarks(
                 WatermarkStrategy.<AISData>forBoundedOutOfOrderness(Duration.ofSeconds(10))
-                    .withTimestampAssigner(new LogKafkaMessagesMapFunction())
+                    .withTimestampAssigner(new AISDataTimestampAssigner())
                     .withIdleness(Duration.ofMinutes(1))
             );
 
@@ -81,11 +80,31 @@ public class LogKafkaMessagesMapFunction {
             .keyBy(value -> 1)
             .window(TumblingEventTimeWindows.of(Time.seconds(10)))
             .aggregate(new CountAggregator(), new ProcessCountWindowFunction());
+
+        // countStBox.addSink(JdbcSink.sink(
+        //     "INSERT INTO vesselcountbyareaandtime (area, count, time) VALUES (?::stbox, ?, ?)",            
+        //     (statement, tuple) -> {
+        //         statement.setString(1, "STBOX XT(((3.3615, 53.964367),(16.505853, 59.24544)),[2011-01-03 00:00:00,2011-01-03 00:00:21])");               
+        //         statement.setInt(2, tuple); 
+        //         statement.setTimestamp(3, new java.sql.Timestamp(System.currentTimeMillis()));
+        //     },
+        //     JdbcExecutionOptions.builder()
+        //         .withBatchSize(1000)
+        //         .withBatchIntervalMs(200)
+        //         .withMaxRetries(5)
+        //         .build(),
+        //     new JdbcConnectionOptions.JdbcConnectionOptionsBuilder()
+        //         .withUrl("jdbc:postgresql://docker.for.mac.host.internal:5438/mobilitydb")
+        //         .withDriverName("org.postgresql.Driver")
+        //         .withPassword("docker")
+        //         .withUsername("docker")
+        //         .build()
+        // ));
         countStBox.print();
             
         env.execute("count Ships in a Temporal Box");
         logger.info("Done");
-        meos_finalize();
+        functions.meos_finalize();
     }
 
     // Static nested classes to avoid serialization issues
@@ -110,7 +129,7 @@ public class LogKafkaMessagesMapFunction {
     }
 
     public static class AISDataTimestampAssigner implements SerializableTimestampAssigner<AISData> {
-        private static final Logger logger = LoggerFactory.getLogger(LogKafkaMessagesMapFunction.class);
+        private static final Logger logger = LoggerFactory.getLogger(AISDataTimestampAssigner.class);
 
         @Override
         public long extractTimestamp(AISData element, long recordTimestamp) {
@@ -149,22 +168,17 @@ public class LogKafkaMessagesMapFunction {
         return dateTime.format(formatter);
     }
     
-    public static int isWithinStBox(double lat, double lon, Long t_out) {
-        //logger.info("Initializing MEOS library");
-        meos_initialize("UTC");
-        
-        STBox stbx = new STBox("STBOX XT(((3.3615, 53.964367),(16.505853, 59.24544)),[2011-01-03 00:00:00,2011-01-03 00:00:21])");
+    public static boolean isWithinStBox(double lat, double lon, Long t_out) throws OperationNotSupportedException {
+        logger.info("Initializing MEOS library");
+        functions.meos_initialize("UTC", errorHandler);
+        STBox stbx = new STBox("SRID=4326;STBOX XT(((3.3615, 53.964367),(16.505853, 59.24544)),[2011-01-03 00:00:00,2011-01-03 00:00:21])");
         String t = convertMillisToTimestamp(t_out);
         String str_pointbuffer = String.format("SRID=4326;POINT(%f %f)@%s", lon, lat, t);
         TGeomPointInst point = new TGeomPointInst(str_pointbuffer);
-    
+        
         logger.info("CreatePoint: {}", str_pointbuffer);
-    
-        Pointer pointPtr = point.getPointInner();
-        Pointer stboxPtr = ((STBox) stbx).get_inner();
-        int withinBounds = eintersects_tpoint_geo(pointPtr, stboxPtr);
-        //logger.info("Intersection check completed: {}", withinBounds);
-    
+        
+        boolean withinBounds = point.ever_intersects(stbx);
         return withinBounds;
     }
     
