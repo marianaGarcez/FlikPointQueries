@@ -20,15 +20,16 @@ import org.apache.flink.connector.kafka.source.KafkaSource;
 import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.api.functions.windowing.ProcessWindowFunction;
-import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
-import org.apache.flink.streaming.api.windowing.time.Time;
-import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
 import org.apache.flink.util.Collector;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.streaming.api.functions.windowing.ProcessWindowFunction;
+import org.apache.flink.streaming.api.windowing.assigners.SlidingEventTimeWindows;
+import org.apache.flink.streaming.api.windowing.time.Time;
+import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
 
 import functions.*;
 import types.boxes.*;
@@ -47,6 +48,8 @@ public class Main {
 
         functions.meos_initialize("UTC", errorHandler);
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        
+        //STBox stbx = new STBox("SRID=4326;STBOX XT(((3.3615, 53.964367),(16.505853, 59.24544)),[2011-01-03 00:00:00,2011-01-03 00:00:21])");
 
         Properties properties = new Properties();
         properties.setProperty("bootstrap.servers", "kafka:9092");
@@ -65,7 +68,7 @@ public class Main {
 
         DataStream<String> rawStream = env.fromSource(kafkaSource, WatermarkStrategy.noWatermarks(), "Kafka Source");
 
-        rawStream.map(new LogKafkaMessagesMapFunction());
+        //rawStream.map(new LogKafkaMessagesMapFunction());
 
         DataStream<AISData> source = rawStream
             .map(new DeserializeAISDataMapFunction())
@@ -78,31 +81,13 @@ public class Main {
         DataStream<Integer> countStBox = source
             .map(new AISDataToTupleMapFunction())
             .keyBy(value -> 1)
-            .window(TumblingEventTimeWindows.of(Time.seconds(10)))
+            .window(SlidingEventTimeWindows.of(Time.seconds(10), Time.seconds(5)))
             .aggregate(new CountAggregator(), new ProcessCountWindowFunction());
 
-        // countStBox.addSink(JdbcSink.sink(
-        //     "INSERT INTO vesselcountbyareaandtime (area, count, time) VALUES (?::stbox, ?, ?)",            
-        //     (statement, tuple) -> {
-        //         statement.setString(1, "STBOX XT(((3.3615, 53.964367),(16.505853, 59.24544)),[2011-01-03 00:00:00,2011-01-03 00:00:21])");               
-        //         statement.setInt(2, tuple); 
-        //         statement.setTimestamp(3, new java.sql.Timestamp(System.currentTimeMillis()));
-        //     },
-        //     JdbcExecutionOptions.builder()
-        //         .withBatchSize(1000)
-        //         .withBatchIntervalMs(200)
-        //         .withMaxRetries(5)
-        //         .build(),
-        //     new JdbcConnectionOptions.JdbcConnectionOptionsBuilder()
-        //         .withUrl("jdbc:postgresql://docker.for.mac.host.internal:5438/mobilitydb")
-        //         .withDriverName("org.postgresql.Driver")
-        //         .withPassword("docker")
-        //         .withUsername("docker")
-        //         .build()
-        // ));
+
         countStBox.print();
             
-        env.execute("count Ships in a Temporal Box");
+        env.execute("Count Ships in a Temporal Box");
         logger.info("Done");
         functions.meos_finalize();
     }
@@ -113,7 +98,7 @@ public class Main {
 
         @Override
         public String map(String value) throws Exception {
-            logger.info("Received message from Kafka: {}", value);
+            //logger.info("Received message from Kafka: {}", value);
             return value;
         }
     }
@@ -123,7 +108,7 @@ public class Main {
 
         @Override
         public AISData map(String value) throws Exception {
-            logger.info("Deserializing message: {}", value);
+            //logger.info("Deserializing message: {}", value);
             return new AISDataDeserializationSchema().deserialize(value.getBytes());
         }
     }
@@ -134,7 +119,7 @@ public class Main {
         @Override
         public long extractTimestamp(AISData element, long recordTimestamp) {
             long timestamp = element.getTimestamp();
-            logger.info("Extracted timestamp: {}", timestamp);
+            //logger.info("Extracted timestamp: {}", timestamp);
             return timestamp;
         }
     }
@@ -144,7 +129,7 @@ public class Main {
 
         @Override
         public Tuple3<Double, Double, Long> map(AISData value) throws Exception {
-            logger.info("Mapping AISData to Tuple3: Long={}, Latitude ={}, Timestamp={}", value.getLon(), value.getLat(), value.getTimestamp());
+            //logger.info("Mapping AISData to Tuple3: Long={}, Latitude ={}, Timestamp={}", value.getLon(), value.getLat(), value.getTimestamp());
             return new Tuple3<>(value.getLon(), value.getLat(), value.getTimestamp());
         }
     }
@@ -154,10 +139,19 @@ public class Main {
 
         @Override
         public void process(Integer key, Context context, Iterable<Integer> elements, Collector<Integer> out) throws Exception {
+            int sum =0;
             for (Integer element : elements) {
-                logger.info("Processing window value={}", element);
-                out.collect(element);
+                sum += element;
             }
+            String result = String.format(
+                "Window [%s - %s]: Key = %d, Sum = %d",
+                convertMillisToTimestamp(context.window().getStart()),
+                convertMillisToTimestamp(context.window().getEnd()),
+                key,
+                sum
+            );
+            out.collect(sum);
+            logger.info("RESULT: {}",result);
         }
     }
 
@@ -169,19 +163,15 @@ public class Main {
     }
     
     public static boolean isWithinStBox(double lat, double lon, Long t_out) throws OperationNotSupportedException {
-        logger.info("Initializing MEOS library");
         functions.meos_initialize("UTC", errorHandler);
-        STBox stbx = new STBox("SRID=4326;STBOX XT(((3.3615, 53.964367),(16.505853, 59.24544)),[2011-01-03 00:00:00,2011-01-03 00:00:21])");
         String t = convertMillisToTimestamp(t_out);
+        STBox stbx = new STBox("SRID=4326;STBOX X((3.3615, 53.964367),(16.505853, 59.24544))");
+
         String str_pointbuffer = String.format("SRID=4326;POINT(%f %f)@%s", lon, lat, t);
         TGeomPointInst point = new TGeomPointInst(str_pointbuffer);
         
-        logger.info("CreatePoint: {}", str_pointbuffer);
-        
-        boolean withinBounds = point.ever_intersects(stbx);
-        return withinBounds;
+        //logger.info("CreatePoint: {}", str_pointbuffer);
+        return true;
     }
-    
-
 
 }
