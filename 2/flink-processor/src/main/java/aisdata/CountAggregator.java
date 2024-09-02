@@ -25,7 +25,7 @@ public class CountAggregator implements AggregateFunction<Tuple3<Double, Double,
             }
         } catch (OperationNotSupportedException e) {
             logger.error("Operation not supported: {}", e.getMessage());
-            return accumulator; // Or handle it as per your requirement
+            return accumulator;
         }
     }
     

@@ -68,6 +68,7 @@ public class Main {
 
         DataStream<String> rawStream = env.fromSource(kafkaSource, WatermarkStrategy.noWatermarks(), "Kafka Source");
 
+        // Print for debug
         //rawStream.map(new LogKafkaMessagesMapFunction());
 
         DataStream<AISData> source = rawStream
