@@ -19,14 +19,14 @@ JMEOS (to a new install JMEOS, go to https://github.com/MobilityDB/JMEOS/tree/ma
 ## To compile
 We should create a docker image for Kafka, Flink, and MobilityDB. To do this, we go to each directory and create each image. Finally, we go to the main directory and compose the docker container.
 
-cd postgres
-docker build -t postgres2 .
-cd ..
-cd kafka-producer
-docker build -t kafka-producer2 .
-cd ..
-cd flink-processor
-mvn clean package  
-docker build -t flink-processor2 .
-cd ..
-docker-compose up -d 
+cd postgres <br />
+docker build -t postgres2 . <br />
+cd .. <br />
+cd kafka-producer <br />
+docker build -t kafka-producer2 . <br />
+cd .. <br />
+cd flink-processor <br />
+mvn clean package  <br />
+docker build -t flink-processor2 . <br />
+cd .. <br />
+docker-compose up -d <br />
