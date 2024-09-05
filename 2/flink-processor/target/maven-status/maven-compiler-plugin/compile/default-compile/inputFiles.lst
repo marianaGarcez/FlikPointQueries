@@ -1,5 +1,5 @@
-/Users/marianaduarte/Documents/GitHub/FlikPointQueries/2/flink-processor/src/main/java/aisdata/Main.java
-/Users/marianaduarte/Documents/GitHub/FlikPointQueries/2/flink-processor/src/main/java/aisdata/AISDataDeserializationSchema.java
-/Users/marianaduarte/Documents/GitHub/FlikPointQueries/2/flink-processor/src/main/java/aisdata/CountAggregator.java
-/Users/marianaduarte/Documents/GitHub/FlikPointQueries/2/flink-processor/src/main/java/aisdata/AISData.java
-/Users/marianaduarte/Documents/GitHub/FlikPointQueries/2/flink-processor/src/main/java/aisdata/AISTestSource.java
+/home/mariana/FlikPointQueries/2/flink-processor/src/main/java/aisdata/Main.java
+/home/mariana/FlikPointQueries/2/flink-processor/src/main/java/aisdata/CountAggregator.java
+/home/mariana/FlikPointQueries/2/flink-processor/src/main/java/aisdata/AISData.java
+/home/mariana/FlikPointQueries/2/flink-processor/src/main/java/aisdata/AISTestSource.java
+/home/mariana/FlikPointQueries/2/flink-processor/src/main/java/aisdata/AISDataDeserializationSchema.java

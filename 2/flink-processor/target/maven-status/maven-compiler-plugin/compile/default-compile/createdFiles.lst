@@ -1,10 +1,10 @@
 aisdata/Main$ProcessCountWindowFunction.class
-aisdata/Main$DeserializeAISDataMapFunction.class
 aisdata/CountAggregator.class
+aisdata/Main$DeserializeAISDataMapFunction.class
 aisdata/Main$AISDataToTupleMapFunction.class
 aisdata/AISTestSource.class
-aisdata/Main$AISDataTimestampAssigner.class
 aisdata/Main.class
+aisdata/Main$AISDataTimestampAssigner.class
 aisdata/AISData.class
 aisdata/Main$LogKafkaMessagesMapFunction.class
 aisdata/AISDataDeserializationSchema.class

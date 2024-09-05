@@ -13,8 +13,19 @@ There is a timer to wait for Kafka to produce some tuples before starting Flink 
 Flink consumes directly into the Kafka topic. It then proceeds to deserialize the message into a data structure. In addition, we set a watermark strategy, that is, assigning event timestamps, handling out-of-order data and defining how late a record can be. Also, we define how long a data source can be idle (not receiving any data) before its resources are released. For counting ships, we use an aggregation function. This aggregation function works inside the window; in this case, we have a sliding window of 10 seconds. The count is done by checking (CountAggregator()) if the point intersects with the spatial bounding box. 
 
 ## Prerequisites
+Maven 3.6.3
+Java 21
 Docker
 JMEOS (to a new install JMEOS, go to https://github.com/MobilityDB/JMEOS/tree/main/jar  and download the JAR file. It is already include in flink-processor/jar for now)
+
+
+
+## Installing java 21 and mvn 
+sudo apt update
+sudo apt install openjdk-21-jdk
+sudo apt install maven
+
+
 
 ## To compile
 We should create a docker image for Kafka, Flink, and MobilityDB. To do this, we go to each directory and create each image. Finally, we go to the main directory and compose the docker container.
