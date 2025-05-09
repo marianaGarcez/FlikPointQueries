@@ -8,7 +8,7 @@ kafka_nodes = "kafka:9092"
 myTopic = "aisdata"
 
 def gen_data():
-  df = pd.read_csv('aisdk_20110301_2000.csv')
+  df = pd.read_csv('multi_ship_trajectory.csv')
 
   prod = KafkaProducer(bootstrap_servers=kafka_nodes, value_serializer=lambda x:dumps(x).encode('utf-8'))
 

@@ -1,7 +1,6 @@
-aisdata/Main$ProcessCountWindowFunction.class
+aisdata/TrajectoryWindowFunction.class
 aisdata/Main$DeserializeAISDataMapFunction.class
-aisdata/CountAggregator.class
-aisdata/Main$AISDataToTupleMapFunction.class
+aisdata/Main$AISDataToTuple4MapFunction.class
 aisdata/AISTestSource.class
 aisdata/Main$AISDataTimestampAssigner.class
 aisdata/Main.class

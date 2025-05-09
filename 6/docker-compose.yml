@@ -31,8 +31,8 @@ services:
         aliases:
           - kafka
 
-  kafka-producer:
-    image: kafka-producer6
+  kafka-producer: # Test
+    image: kafka-producertest
     depends_on:
     - kafka
     environment:
@@ -43,7 +43,7 @@ services:
     - bridge
 
   flink-processor:
-    image: flink-processor6
+    image: flink-processortest
     depends_on:
     - kafka
     environment:
@@ -56,7 +56,7 @@ services:
   postgres:
     build:
       context: ./postgres
-    container_name: postgres6
+    container_name: postgrestest
     restart: always
     environment:
         - POSTGRES_USER=docker

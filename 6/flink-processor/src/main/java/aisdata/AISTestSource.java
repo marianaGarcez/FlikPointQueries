@@ -17,7 +17,7 @@ public class AISTestSource implements SourceFunction<AISData> {
             data.setSpeed(15.0);
             data.setCourse(90.0);
             ctx.collect(data);
-            Thread.sleep(1000); // Simulate data arrival every second
+            Thread.sleep(1000);
         }
     }
 
