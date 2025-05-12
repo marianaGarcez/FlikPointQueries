@@ -66,12 +66,12 @@ ProcessWindowFunction<Tuple4<Integer, Double, Double, Long>, TGeomPointSeq, Inte
         }
         trajbuffer.append("}");
 
-        if (!trajectory.isEmpty()) {
-            logger.info("MMSI={}, Window [{} - {}]: {} trajectory points", 
-                mmsiKey,
-                convertMillisToTimestamp(context.window().getStart()),
-                convertMillisToTimestamp(context.window().getEnd()),
-                trajectory.size());
+        // if (!trajectory.isEmpty()) {
+        //     logger.info("MMSI={}, Window [{} - {}]: {} trajectory points", 
+        //         mmsiKey,
+        //         convertMillisToTimestamp(context.window().getStart()),
+        //         convertMillisToTimestamp(context.window().getEnd()),
+        //         trajectory.size());
 
             logger.info("trajbuffer: {}", trajbuffer);
             TGeomPointSeq trajectoryMEOS = new TGeomPointSeq(trajbuffer.toString());
@@ -81,14 +81,6 @@ ProcessWindowFunction<Tuple4<Integer, Double, Double, Long>, TGeomPointSeq, Inte
         }
         
     }
-
-    private String convertMillisToTimestamp(long millis, int count) {
-        Instant instant = Instant.ofEpochMilli(millis+count);
-        LocalDateTime dateTime = LocalDateTime.ofInstant(instant, ZoneId.of("UTC"));
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
-        return dateTime.format(formatter);
-    }
-
     private String convertMillisToTimestamp(long millis) {
         Instant instant = Instant.ofEpochMilli(millis);
         LocalDateTime dateTime = LocalDateTime.ofInstant(instant, ZoneId.of("UTC"));

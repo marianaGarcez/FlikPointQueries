@@ -53,55 +53,66 @@ public class Main {
         String javaLibraryPath = System.getProperty("java.library.path");
         logger.info("Java library path: {}", javaLibraryPath);
 
-        // Get current directory
-        functions.meos_initialize("UTC", errorHandler);
-
-        final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        
-        //STBox stbx = new STBox("SRID=4326;STBOX XT(((3.3615, 53.964367),(16.505853, 59.24544)),[2011-01-03 00:00:00,2011-01-03 00:00:21])");
-
-        Properties properties = new Properties();
-        properties.setProperty("bootstrap.servers", "kafka:9092");
-        properties.setProperty("group.id", "flink_consumer");
-        properties.setProperty(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-        properties.setProperty(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-        properties.setProperty("auto.offset.reset", "earliest");
-
-        KafkaSource<String> kafkaSource = KafkaSource.<String>builder()
-            .setBootstrapServers("kafka:9092")
-            .setGroupId("flink_consumer")
-            .setTopics("aisdata")
-            .setStartingOffsets(OffsetsInitializer.earliest())
-            .setValueOnlyDeserializer(new SimpleStringSchema())
-            .build();
-
-        DataStream<String> rawStream = env.fromSource(kafkaSource, WatermarkStrategy.noWatermarks(), "Kafka Source");
-
-        // Print stream from kafka
-        //rawStream.map(new LogKafkaMessagesMapFunction());
-
-        DataStream<AISData> source = rawStream
-            .map(new DeserializeAISDataMapFunction())
-            .assignTimestampsAndWatermarks(
-                WatermarkStrategy.<AISData>forBoundedOutOfOrderness(Duration.ofSeconds(10))
-                    .withTimestampAssigner(new AISDataTimestampAssigner())
-                    .withIdleness(Duration.ofMinutes(1))
-            );
-
-        
-        DataStream<TGeomPointSeq> trajectories = source
-            .map(new AISDataToTuple4MapFunction())
-            .keyBy(tuple -> tuple.f0) 
-            .window(TumblingEventTimeWindows.of(Time.seconds(10)))
-            .process(new TrajectoryWindowFunction());
-
-        //trajectories.print();
+        // Initialize MEOS with proper error handling
+        try {
+            logger.info("Initializing MEOS library");
+            functions.meos_initialize("UTC", errorHandler);
             
-        env.execute("Process AIS Trajectories");
-        logger.info("Done");
+            final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+            
+            //STBox stbx = new STBox("SRID=4326;STBOX XT(((3.3615, 53.964367),(16.505853, 59.24544)),[2011-01-03 00:00:00,2011-01-03 00:00:21])");
 
-        functions.meos_finalize();
-       
+            Properties properties = new Properties();
+            properties.setProperty("bootstrap.servers", "kafka:9092");
+            properties.setProperty("group.id", "flink_consumer");
+            properties.setProperty(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+            properties.setProperty(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+            properties.setProperty("auto.offset.reset", "earliest");
+
+            KafkaSource<String> kafkaSource = KafkaSource.<String>builder()
+                .setBootstrapServers("kafka:9092")
+                .setGroupId("flink_consumer")
+                .setTopics("aisdata")
+                .setStartingOffsets(OffsetsInitializer.earliest())
+                .setValueOnlyDeserializer(new SimpleStringSchema())
+                .build();
+
+            DataStream<String> rawStream = env.fromSource(kafkaSource, WatermarkStrategy.noWatermarks(), "Kafka Source");
+
+            // Print stream from kafka
+            //rawStream.map(new LogKafkaMessagesMapFunction());
+
+            DataStream<AISData> source = rawStream
+                .map(new DeserializeAISDataMapFunction())
+                .assignTimestampsAndWatermarks(
+                    WatermarkStrategy.<AISData>forBoundedOutOfOrderness(Duration.ofSeconds(10))
+                        .withTimestampAssigner(new AISDataTimestampAssigner())
+                        .withIdleness(Duration.ofMinutes(1))
+                );
+
+            
+            DataStream<TGeomPointSeq> trajectories = source
+                .map(new AISDataToTuple4MapFunction())
+                .keyBy(tuple -> tuple.f0) 
+                .window(TumblingEventTimeWindows.of(Time.seconds(10)))
+                .process(new TrajectoryWindowFunction());
+
+            //trajectories.print();
+                
+            env.execute("Process AIS Trajectories");
+            logger.info("Done");
+        } catch (Exception e) {
+            logger.error("Error during execution: {}", e.getMessage(), e);
+            throw e;
+        } finally {
+            // Always ensure MEOS is finalized
+            try {
+                logger.info("Finalizing MEOS library");
+                functions.meos_finalize();
+            } catch (Exception e) {
+                logger.error("Error during MEOS finalization: {}", e.getMessage(), e);
+            }
+        }
     }
 
     // Static nested classes to avoid serialization issues
