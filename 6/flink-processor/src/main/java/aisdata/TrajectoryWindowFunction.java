@@ -66,20 +66,19 @@ ProcessWindowFunction<Tuple4<Integer, Double, Double, Long>, TGeomPointSeq, Inte
         }
         trajbuffer.append("}");
 
-        // if (!trajectory.isEmpty()) {
-        //     logger.info("MMSI={}, Window [{} - {}]: {} trajectory points", 
-        //         mmsiKey,
-        //         convertMillisToTimestamp(context.window().getStart()),
-        //         convertMillisToTimestamp(context.window().getEnd()),
-        //         trajectory.size());
-
+        if (!trajectory.isEmpty()) {
+            logger.info("MMSI={}, Window [{} - {}]: {} trajectory points", 
+                mmsiKey,
+                convertMillisToTimestamp(context.window().getStart()),
+                convertMillisToTimestamp(context.window().getEnd()),
+                trajectory.size());
+        
             logger.info("trajbuffer: {}", trajbuffer);
             TGeomPointSeq trajectoryMEOS = new TGeomPointSeq(trajbuffer.toString());
             logger.info("trajectoryMEOS created");
 
             out.collect(trajectoryMEOS);
         }
-        
     }
     private String convertMillisToTimestamp(long millis) {
         Instant instant = Instant.ofEpochMilli(millis);

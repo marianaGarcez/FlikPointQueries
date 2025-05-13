@@ -168,10 +168,9 @@
             <!-- Java Compiler -->
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.8.1</version>
+                <version>3.12.1</version>
                 <configuration>
-                    <source>${target.java.version}</source>
-                    <target>${target.java.version}</target>
+                    <release>${target.java.version}</release>
                 </configuration>
             </plugin>
             <plugin>
